@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Task Manager</title>
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+	<link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+	<div class="header">
+		<div class="container">
+			<div class="user-info">
+				<span>Welcome, <strong id="userName"></strong></span>
+			</div>
+			
+			<button class="btn btn-light" onclick="logout()">Logout</button>
+		</div>
+	</div>
+
+	<div class="container">
+		<div class="row">
+			<div class="col">
+				<h1 class="mt-4">Task Manager</h1>
+			</div>
+			<div class="col text-right">
+
+				<button class="btn btn-primary mt-4 mb-3 invisible" id="openeditModalBtn" data-toggle="modal"
+					data-target="#editTaskModal">Edit Task</button>
+				<button class="btn btn-primary mt-4 mb-3" id="openModalBtn" data-toggle="modal"
+					data-target="#newTaskModal">New Task</button>
+			</div>
+		</div>
+		<div class="row task-container">
+			<div class="col" id="taskList"></div>
+		</div>
+	</div>
+
+	<!-- New Task Modal -->
+	<div class="modal fade" id="newTaskModal" tabindex="-1" role="dialog" aria-labelledby="newTaskModalLabel"
+		aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="newTaskModalLabel">New Task</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<form id="newTaskForm">
+						<div class="form-group">
+							<label for="taskTitle">Title</label>
+							<input type="text" class="form-control" id="taskTitle" name="taskTitle" required>
+						</div>
+						<div class="form-group">
+							<label for="taskDescription">Description</label>
+							<textarea class="form-control" id="taskDescription" name="taskDescription"
+								rows="3"></textarea>
+						</div>
+						<div class="form-group">
+							<label for="taskStatus">Status</label>
+							<select class="form-control" id="taskStatus" name="taskStatus">
+								<option value="New">New</option>
+								<option value="In Progress">In Progress</option>
+								<option value="Completed">Completed</option>
+							</select>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+					<button type="submit" form="newTaskForm" class="btn btn-primary">Save Task</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+	<!-- Edit Task Modal -->
+	<div class="modal fade" id="editTaskModal" tabindex="-1" role="dialog" aria-labelledby="editTaskModalLabel"
+		aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="newTaskModalLabel">New Task</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<form id="editTaskForm">
+						<div class="form-group">
+							<label for="eidtTaskTitle">Title</label>
+							<input type="text" class="form-control" id="eidtTaskTitle" name="eidtTaskTitle" required>
+						</div>
+						<div class="form-group">
+							<label for="editTaskDescription">Description</label>
+							<textarea class="form-control" id="editTaskDescription" name="editTaskDescription"
+								rows="3"></textarea>
+						</div>
+						<div class="form-group">
+							<label for="editTaskStatus">Status</label>
+							<select class="form-control" id="editTaskStatus" name="editTaskStatus">
+								<option value="New">New</option>
+								<option value="In Progress">In Progress</option>
+								<option value="Completed">Completed</option>
+							</select>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+					<button type="submit" form="editTaskForm" class="btn btn-primary">Update Task</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+	<script>
+		var taskList = [];
+		var editTaskObject;
+		var user = sessionStorage.getItem('user');
+		var token = sessionStorage.getItem('token');
+	
+		if(!user) {
+			window.location.href = './login.html';
+		} else {
+			user = JSON.parse(user)
+			document.getElementById('userName').innerHTML = user.name;
+		}
+
+		try {
+			fetch(`http://localhost:3000/get_tasks/${user._id}`, {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			}).then(async (response) => {
+
+				if (response.ok) {
+
+					taskList = await response.json();
+					console.log(taskList)
+					taskListEle = document.getElementById('taskList')
+
+					taskList.forEach(task => {
+						const taskElement = document.createElement('div');
+						taskElement.classList.add('task');
+						taskElement.innerHTML = `
+						<div class="row">
+							<div class="col-md-9">
+								<div class="task-title text-capitalize">${task.title}</div>
+								<div class="task-description text-capitalize">${task.description}</div>
+								<div class="task-status">Status: ${task.status}</div>
+							</div>
+							<div class="col-md-3">
+								<div class="task-actions text-right">
+									<button class="btn btn-info" onclick=editTask('${task._id}')>Edit</button>
+									<button class="btn btn-danger" onclick=deleteTask('${task._id}')>Delete</button>
+								</div>
+							</div>
+						</div>
+					`;
+						taskListEle.appendChild(taskElement);
+					});
+
+				} else {
+					throw new Error('Login failed');
+				}
+			});
+		} catch (error) {
+			console.error('Login error:', error);
+		}
+
+
+		const form_data = document.getElementById('newTaskForm');
+		form_data.addEventListener('submit', async (event) => {
+			event.preventDefault();
+
+			const title = document.getElementById('taskTitle').value;
+			const description = document.getElementById('taskDescription').value;
+			const status = document.getElementById('taskStatus').value;
+
+			try {
+				const response = await fetch('http://localhost:3000/create_task', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({ title, description, status, user: user._id })
+				});
+				if (response.ok) {
+
+					const data = await response.json();
+					console.log(data)
+					location.reload();
+
+				} else {
+					throw new Error('Login failed');
+				}
+			} catch (error) {
+				console.error('Login error:', error);
+			}
+		});
+
+
+		async function deleteTask(id) {
+			const response = await fetch(`http://localhost:3000/delete_task/${id}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+			if (response.ok) {
+				const data = await response.json();
+				location.reload();
+			} else {
+				throw new Error('Login failed');
+			}
+		}
+
+
+		async function editTask(id) {
+			editTaskObject = taskList.find(item => item._id == id);
+			console.log(editTaskObject)
+
+			document.getElementById('openeditModalBtn').click();
+
+			document.getElementById('eidtTaskTitle').value = editTaskObject.title;
+			document.getElementById('editTaskDescription').value = editTaskObject.description;
+			document.getElementById('editTaskStatus').value = editTaskObject.status;
+		}
+
+
+		const edit_form_data = document.getElementById('editTaskForm');
+		edit_form_data.addEventListener('submit', async (event) => {
+			event.preventDefault();
+
+			const title = document.getElementById('eidtTaskTitle').value;
+			const description = document.getElementById('editTaskDescription').value;
+			const status = document.getElementById('editTaskStatus').value;
+
+			try {
+				const response = await fetch(`http://localhost:3000/update_task/${editTaskObject._id}`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({ title, description, status, user: user._id })
+				});
+				if (response.ok) {
+
+					const data = await response.json();
+					console.log(data)
+					location.reload();
+
+				} else {
+					throw new Error('Login failed');
+				}
+			} catch (error) {
+				console.error('Login error:', error);
+			}
+		});
+
+		function logout() {
+			sessionStorage.clear();
+			window.location.href = './login.html';
+		}
+	</script>
+</body>
+
+</html>
